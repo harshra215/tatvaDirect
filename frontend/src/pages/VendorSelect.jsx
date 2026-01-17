@@ -59,7 +59,7 @@ const VendorSelect = ({ items, onComplete }) => {
                   <div className="vendor-details">
                     <div className="detail">
                       <TrendingUp size={16} />
-                      <span>${vendor.price}</span>
+                      <span>₹{vendor.price}</span>
                     </div>
                     <div className="detail">
                       <Clock size={16} />

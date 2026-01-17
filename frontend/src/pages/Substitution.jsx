@@ -60,7 +60,7 @@ const Substitution = ({ selectedVendors, onComplete }) => {
                     <span className="label">Original</span>
                     <h4>{sub.originalItem}</h4>
                     <div className="sub-meta">
-                      <span>${sub.originalPrice}</span>
+                      <span>₹{sub.originalPrice}</span>
                       <span>{sub.originalLeadTime} days</span>
                     </div>
                   </div>
@@ -69,11 +69,11 @@ const Substitution = ({ selectedVendors, onComplete }) => {
                     <span className="label">Suggested</span>
                     <h4>{sub.suggestedItem}</h4>
                     <div className="sub-meta">
-                      <span>${sub.suggestedPrice}</span>
+                      <span>₹{sub.suggestedPrice}</span>
                       <span>{sub.suggestedLeadTime} days</span>
                     </div>
                     <div className="savings">
-                      Save ${sub.originalPrice - sub.suggestedPrice}
+                      Save ₹{sub.originalPrice - sub.suggestedPrice}
                     </div>
                   </div>
                 </div>

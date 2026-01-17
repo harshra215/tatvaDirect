@@ -61,7 +61,7 @@ const CreatePO = ({ selectedVendors, substitutions }) => {
           <div key={group.vendorId} className="po-card">
             <div className="po-header">
               <h3>{group.vendorName}</h3>
-              <div className="po-total">${group.total}</div>
+              <div className="po-total">₹{group.total}</div>
             </div>
             <table className="po-table">
               <thead>
@@ -77,8 +77,8 @@ const CreatePO = ({ selectedVendors, substitutions }) => {
                   <tr key={idx}>
                     <td>{item.name}</td>
                     <td>{item.quantity}</td>
-                    <td>${item.price}</td>
-                    <td>${item.quantity * item.price}</td>
+                    <td>₹{item.price}</td>
+                    <td>₹{item.quantity * item.price}</td>
                   </tr>
                 ))}
               </tbody>

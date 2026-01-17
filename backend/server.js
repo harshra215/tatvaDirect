@@ -5,6 +5,7 @@ import { boqRouter } from './routes/boq.js';
 import { vendorRouter } from './routes/vendors.js';
 import { substitutionRouter } from './routes/substitutions.js';
 import { poRouter } from './routes/po.js';
+import { authRouter } from './routes/auth.js';
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -12,6 +13,7 @@ const upload = multer({ dest: 'uploads/' });
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', authRouter);
 app.use('/api/boq', boqRouter);
 app.use('/api/vendors', vendorRouter);
 app.use('/api/substitutions', substitutionRouter);

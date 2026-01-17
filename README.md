@@ -5,8 +5,8 @@ Clean, minimal UI for AI-powered procurement workflow with 4 key pages.
 ## Features
 
 1. **BOQ Normalize** - Upload BOQ files and map to normalized catalog with AI confidence scores
-2. **Vendor Select** - Compare vendors by price/lead time and select best options
-3. **Substitution** - Review AI-suggested alternatives with cost savings
+2. **Vendor Select** - Compare vendors by price/lead time and select best options (INR pricing)
+3. **Substitution** - Review AI-suggested alternatives with cost savings (in INR)
 4. **Create PO** - Group items by vendor and confirm purchase orders
 
 ## Setup
