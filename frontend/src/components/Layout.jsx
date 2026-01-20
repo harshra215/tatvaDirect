@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { FileText, Users, RefreshCw, ShoppingCart, User, LogOut, ChevronDown } from 'lucide-react';
+import { FileText, Users, RefreshCw, ShoppingCart, User, LogOut, ChevronDown, BarChart3 } from 'lucide-react';
 import tatvaLogo from '../images/tatva_d.png';
 import './Layout.css';
 
@@ -8,10 +8,21 @@ const Layout = ({ user, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const steps = [
-    { path: '/boq-normalize', label: 'BOQ Normalize', icon: FileText },
-    { path: '/vendor-select', label: 'Vendor Select', icon: Users },
-    { path: '/substitution', label: 'Substitution', icon: RefreshCw },
-    { path: '/create-po', label: 'Create PO', icon: ShoppingCart }
+    ...(user?.userType === 'admin' ? [{
+      path: '/admin-dashboard', 
+      label: 'Admin Dashboard', 
+      icon: BarChart3 
+    }] : user?.userType === 'service_provider' || user?.userType === 'supplier' ? [{
+      path: user?.userType === 'service_provider' ? '/dashboard' : '/supplier-dashboard', 
+      label: 'Dashboard', 
+      icon: BarChart3 
+    }] : []),
+    ...(user?.userType !== 'admin' ? [
+      { path: '/boq-normalize', label: 'BOQ Normalize', icon: FileText },
+      { path: '/supplier-select', label: 'Supplier Select', icon: Users },
+      { path: '/substitution', label: 'Substitution', icon: RefreshCw },
+      { path: '/create-po', label: 'Create PO', icon: ShoppingCart }
+    ] : [])
   ];
 
   return (
@@ -40,13 +51,26 @@ const Layout = ({ user, onLogout }) => {
             </div>
             <div className="user-info">
               <div className="user-name">{user?.name}</div>
-              <div className="user-company">{user?.company}</div>
+              <div className="user-company">
+                {user?.userType === 'admin' ? '🔐 Admin' :
+                 user?.userType === 'service_provider' ? '🏢 Service Provider' : 
+                 user?.userType === 'supplier' ? '🚛 Supplier' : 
+                 '👤 User'} • {user?.company}
+              </div>
             </div>
             <ChevronDown size={16} className={`chevron ${showUserMenu ? 'rotated' : ''}`} />
           </div>
           
           {showUserMenu && (
             <div className="user-menu">
+              <NavLink 
+                to="/profile" 
+                className="user-menu-item"
+                onClick={() => setShowUserMenu(false)}
+              >
+                <User size={16} />
+                <span>Profile</span>
+              </NavLink>
               <button className="user-menu-item" onClick={onLogout}>
                 <LogOut size={16} />
                 <span>Logout</span>

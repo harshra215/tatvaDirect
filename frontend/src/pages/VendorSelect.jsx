@@ -40,7 +40,7 @@ const VendorSelect = ({ items, onComplete }) => {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Vendor Selection</h1>
+        <h1>Supplier Selection</h1>
         <p>Choose the best vendor for each item</p>
       </div>
 

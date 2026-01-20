@@ -165,9 +165,15 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
 .user-menu-item:hover {
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+}
+
+.user-menu-item:last-child:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
 }

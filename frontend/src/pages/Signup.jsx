@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Building, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building, UserPlus, Briefcase, Truck } from 'lucide-react';
 import tatvaLogo from '../images/tatva_d.png';
 import './Auth.css';
 
@@ -9,6 +9,7 @@ const Signup = ({ onLogin }) => {
     name: '',
     email: '',
     company: '',
+    userType: '', // No default selection
     password: '',
     confirmPassword: ''
   });
@@ -53,6 +54,7 @@ const Signup = ({ onLogin }) => {
           name: formData.name,
           email: formData.email,
           company: formData.company,
+          userType: formData.userType,
           password: formData.password
         })
       });
@@ -136,6 +138,56 @@ const Signup = ({ onLogin }) => {
                 required
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Account Type (Optional)</label>
+            <div className="user-type-selection">
+              <div 
+                className={`user-type-option ${formData.userType === 'service_provider' ? 'selected' : ''}`}
+                onClick={() => setFormData({...formData, userType: 'service_provider'})}
+              >
+                <div className="user-type-icon">
+                  <Briefcase size={24} />
+                </div>
+                <div className="user-type-content">
+                  <h3>Service Provider</h3>
+                  <p>I need procurement services and want to create BOQs</p>
+                </div>
+                <input
+                  type="radio"
+                  name="userType"
+                  value="service_provider"
+                  checked={formData.userType === 'service_provider'}
+                  onChange={handleChange}
+                  hidden
+                />
+              </div>
+
+              <div 
+                className={`user-type-option ${formData.userType === 'supplier' ? 'selected' : ''}`}
+                onClick={() => setFormData({...formData, userType: 'supplier'})}
+              >
+                <div className="user-type-icon">
+                  <Truck size={24} />
+                </div>
+                <div className="user-type-content">
+                  <h3>Supplier</h3>
+                  <p>I supply materials and want to receive purchase orders</p>
+                </div>
+                <input
+                  type="radio"
+                  name="userType"
+                  value="supplier"
+                  checked={formData.userType === 'supplier'}
+                  onChange={handleChange}
+                  hidden
+                />
+              </div>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>
+              You can skip this and select your role later from your profile
+            </p>
           </div>
 
           <div className="form-group">

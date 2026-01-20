@@ -4,6 +4,10 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Profile from './pages/Profile';
+import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
+import SupplierDashboard from './pages/SupplierDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import BOQNormalize from './pages/BOQNormalize';
 import VendorSelect from './pages/VendorSelect';
 import Substitution from './pages/Substitution';
@@ -100,13 +104,40 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/boq-normalize" replace />} />
+          <Route 
+            index 
+            element={
+              user?.userType === 'admin' ?
+              <Navigate to="/admin-dashboard" replace /> :
+              user?.userType === 'service_provider' ? 
+              <Navigate to="/dashboard" replace /> : 
+              user?.userType === 'supplier' ?
+              <Navigate to="/supplier-dashboard" replace /> :
+              <Navigate to="/boq-normalize" replace />
+            } 
+          />
+          <Route 
+            path="admin-dashboard" 
+            element={<AdminDashboard user={user} />} 
+          />
+          <Route 
+            path="dashboard" 
+            element={<ServiceProviderDashboard user={user} />} 
+          />
+          <Route 
+            path="supplier-dashboard" 
+            element={<SupplierDashboard user={user} />} 
+          />
+          <Route 
+            path="profile" 
+            element={<Profile user={user} />} 
+          />
           <Route 
             path="boq-normalize" 
             element={<BOQNormalize onComplete={setNormalizedItems} />} 
           />
           <Route 
-            path="vendor-select" 
+            path="supplier-select" 
             element={<VendorSelect items={normalizedItems} onComplete={setSelectedVendors} />} 
           />
           <Route 

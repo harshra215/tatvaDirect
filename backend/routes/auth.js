@@ -18,7 +18,12 @@ const generateToken = (userId) => {
 // Sign up route
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, company, password } = req.body;
+    const { name, email, company, userType, password } = req.body;
+
+    // Validate userType (allow empty for users who don't select)
+    if (userType && !['service_provider', 'supplier'].includes(userType)) {
+      return res.status(400).json({ message: 'Invalid user type' });
+    }
 
     // Check if user already exists
     const existingUser = users.find(user => user.email === email);
@@ -35,6 +40,7 @@ router.post('/signup', async (req, res) => {
       name,
       email,
       company,
+      userType,
       password: hashedPassword,
       createdAt: new Date().toISOString()
     };
@@ -63,7 +69,27 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
+    // Check for admin credentials first
+    if (email === 'admin@tatvadirect.com' && password === 'TatvaAdmin@2024') {
+      const adminUser = {
+        id: 999,
+        name: 'Admin User',
+        email: 'admin@tatvadirect.com',
+        company: 'Tatva Direct',
+        userType: 'admin',
+        createdAt: new Date().toISOString()
+      };
+
+      const token = generateToken(adminUser.id);
+      
+      return res.json({
+        message: 'Admin login successful',
+        token,
+        user: adminUser
+      });
+    }
+
+    // Find regular user by email
     const user = users.find(user => user.email === email);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -122,4 +148,4 @@ router.get('/profile', authenticateToken, (req, res) => {
   res.json({ user: userWithoutPassword });
 });
 
-export { router as authRouter };
+export { router as authRouter, users };
