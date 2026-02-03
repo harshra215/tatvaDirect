@@ -1,108 +1,181 @@
 import express from 'express';
 import { authenticateToken } from './auth.js';
+import Product from '../models/Product.js';
+import Order from '../models/Order.js';
 
 const router = express.Router();
 
-// Mock products database
-let products = [
-  {
-    id: 1,
-    name: 'Steel Reinforcement Bar 12mm TMT',
-    category: 'steel',
-    price: 45,
-    unit: 'kg',
-    stock: 5000,
-    description: 'High quality TMT bars for construction',
-    supplierId: 1
-  },
-  {
-    id: 2,
-    name: 'Ordinary Portland Cement Grade 53',
-    category: 'cement',
-    price: 280,
-    unit: 'bag',
-    stock: 2000,
-    description: 'Premium quality cement for all construction needs',
-    supplierId: 1
-  }
-];
-
 // Get all products for a supplier
-router.get('/products', authenticateToken, (req, res) => {
+router.get('/products', authenticateToken, async (req, res) => {
   try {
-    const supplierProducts = products.filter(p => p.supplierId === req.userId);
-    res.json({ products: supplierProducts });
+    const products = await Product.find({ supplier: req.userId });
+    res.json({ 
+      status: 'success',
+      products 
+    });
   } catch (error) {
     console.error('Get products error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
 // Add new product
-router.post('/products', authenticateToken, (req, res) => {
+router.post('/products', authenticateToken, async (req, res) => {
   try {
-    const productData = req.body;
-    const newProduct = {
-      id: products.length + 1,
-      ...productData,
-      supplierId: req.userId,
-      createdAt: new Date().toISOString()
+    const productData = {
+      ...req.body,
+      supplier: req.userId
     };
     
-    products.push(newProduct);
+    const newProduct = await Product.create(productData);
+    
     res.status(201).json({ 
+      status: 'success',
       message: 'Product added successfully',
       product: newProduct 
     });
   } catch (error) {
     console.error('Add product error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validation Error',
+        errors
+      });
+    }
+    
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
 // Update product
-router.put('/products/:id', authenticateToken, (req, res) => {
+router.put('/products/:id', authenticateToken, async (req, res) => {
   try {
-    const productId = parseInt(req.params.id);
-    const productData = req.body;
+    const product = await Product.findOneAndUpdate(
+      { _id: req.params.id, supplier: req.userId },
+      req.body,
+      { new: true, runValidators: true }
+    );
     
-    const productIndex = products.findIndex(p => p.id === productId && p.supplierId === req.userId);
-    
-    if (productIndex === -1) {
-      return res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'Product not found' 
+      });
     }
     
-    products[productIndex] = {
-      ...products[productIndex],
-      ...productData,
-      updatedAt: new Date().toISOString()
-    };
-    
     res.json({ 
+      status: 'success',
       message: 'Product updated successfully',
-      product: products[productIndex] 
+      product 
     });
   } catch (error) {
     console.error('Update product error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validation Error',
+        errors
+      });
+    }
+    
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
 // Delete product
-router.delete('/products/:id', authenticateToken, (req, res) => {
+router.delete('/products/:id', authenticateToken, async (req, res) => {
   try {
-    const productId = parseInt(req.params.id);
-    const productIndex = products.findIndex(p => p.id === productId && p.supplierId === req.userId);
+    const product = await Product.findOneAndDelete({ 
+      _id: req.params.id, 
+      supplier: req.userId 
+    });
     
-    if (productIndex === -1) {
-      return res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'Product not found' 
+      });
     }
     
-    products.splice(productIndex, 1);
-    res.json({ message: 'Product deleted successfully' });
+    res.json({ 
+      status: 'success',
+      message: 'Product deleted successfully' 
+    });
   } catch (error) {
     console.error('Delete product error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
+  }
+});
+
+// Get supplier orders
+router.get('/orders', authenticateToken, async (req, res) => {
+  try {
+    const orders = await Order.find({ supplier: req.userId })
+      .populate('serviceProvider', 'name company email')
+      .populate('items.product', 'name category unit')
+      .sort({ createdAt: -1 });
+    
+    res.json({ 
+      status: 'success',
+      orders 
+    });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
+  }
+});
+
+// Update order status
+router.patch('/orders/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    
+    const order = await Order.findOne({ 
+      _id: req.params.id, 
+      supplier: req.userId 
+    });
+    
+    if (!order) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'Order not found' 
+      });
+    }
+    
+    order.addStatusHistory(status, req.userId, notes);
+    await order.save();
+    
+    res.json({ 
+      status: 'success',
+      message: 'Order status updated successfully',
+      order 
+    });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 

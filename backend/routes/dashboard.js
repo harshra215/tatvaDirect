@@ -1,146 +1,133 @@
 import express from 'express';
 import { authenticateToken } from './auth.js';
+import User from '../models/User.js';
+import Product from '../models/Product.js';
+import BOQ from '../models/BOQ.js';
+import Order from '../models/Order.js';
 
 const router = express.Router();
 
-// Mock data for dashboards
-const mockServiceProviderData = {
-  stats: {
-    totalBOQs: 12,
-    activePOs: 8,
-    totalSpent: 2450000,
-    pendingApprovals: 3
-  },
-  recentBOQs: [
-    {
-      id: 1,
-      name: 'Office Building Construction',
-      itemCount: 45,
-      createdAt: '2 days ago',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      name: 'Residential Complex Phase 1',
-      itemCount: 78,
-      createdAt: '5 days ago',
-      status: 'processing'
-    },
-    {
-      id: 3,
-      name: 'Shopping Mall Infrastructure',
-      itemCount: 156,
-      createdAt: '1 week ago',
-      status: 'pending'
-    }
-  ],
-  recentPOs: [
-    {
-      id: '2024001',
-      vendor: 'BuildMart Supply',
-      amount: 450000,
-      status: 'delivered'
-    },
-    {
-      id: '2024002',
-      vendor: 'ProConstruct Ltd',
-      amount: 280000,
-      status: 'pending'
-    },
-    {
-      id: '2024003',
-      vendor: 'MegaSupply Co',
-      amount: 125000,
-      status: 'processing'
-    }
-  ]
-};
-
-const mockSupplierData = {
-  stats: {
-    totalProducts: 156,
-    activeOrders: 23,
-    totalRevenue: 3250000,
-    pendingQuotes: 7
-  },
-  products: [
-    {
-      id: 1,
-      name: 'Steel Reinforcement Bar 12mm TMT',
-      category: 'steel',
-      price: 45,
-      unit: 'kg',
-      stock: 5000,
-      description: 'High quality TMT bars for construction'
-    },
-    {
-      id: 2,
-      name: 'Ordinary Portland Cement Grade 53',
-      category: 'cement',
-      price: 280,
-      unit: 'bag',
-      stock: 2000,
-      description: 'Premium quality cement for all construction needs'
-    },
-    {
-      id: 3,
-      name: 'Fine Aggregate River Sand',
-      category: 'aggregates',
-      price: 25,
-      unit: 'cft',
-      stock: 10000,
-      description: 'Clean river sand for concrete mixing'
-    },
-    {
-      id: 4,
-      name: 'Red Clay Bricks First Class',
-      category: 'masonry',
-      price: 8,
-      unit: 'nos',
-      stock: 50000,
-      description: 'High quality red clay bricks'
-    }
-  ],
-  orders: [
-    {
-      id: 'ORD001',
-      customer: 'ABC Construction Ltd',
-      amount: 450000,
-      status: 'delivered'
-    },
-    {
-      id: 'ORD002',
-      customer: 'XYZ Builders',
-      amount: 280000,
-      status: 'pending'
-    },
-    {
-      id: 'ORD003',
-      customer: 'Modern Constructions',
-      amount: 125000,
-      status: 'processing'
-    }
-  ]
-};
-
 // Service Provider Dashboard
-router.get('/service-provider', authenticateToken, (req, res) => {
+router.get('/service-provider', authenticateToken, async (req, res) => {
   try {
-    res.json(mockServiceProviderData);
+    // Get user's BOQs
+    const boqs = await BOQ.find({ serviceProvider: req.userId }).sort({ createdAt: -1 });
+    
+    // Get user's orders (as service provider)
+    const orders = await Order.find({ serviceProvider: req.userId })
+      .populate('supplier', 'name company')
+      .sort({ createdAt: -1 });
+
+    // Calculate stats
+    const stats = {
+      totalBOQs: boqs.length,
+      activePOs: orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length,
+      totalSpent: orders
+        .filter(o => o.status === 'delivered')
+        .reduce((sum, o) => sum + o.totalAmount, 0),
+      pendingApprovals: orders.filter(o => o.status === 'pending').length
+    };
+
+    // Format recent BOQs
+    const recentBOQs = boqs.slice(0, 5).map(boq => ({
+      id: boq._id,
+      name: boq.name,
+      itemCount: boq.itemCount,
+      createdAt: formatDate(boq.createdAt),
+      status: boq.status
+    }));
+
+    // Format recent POs (orders)
+    const recentPOs = orders.slice(0, 5).map(order => ({
+      id: order.orderNumber || order._id,
+      vendor: order.supplier ? (order.supplier.company || order.supplier.name) : 'Unknown',
+      amount: order.totalAmount,
+      status: order.status
+    }));
+
+    res.json({
+      status: 'success',
+      stats,
+      recentBOQs,
+      recentPOs
+    });
   } catch (error) {
     console.error('Service provider dashboard error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
 // Supplier Dashboard
-router.get('/supplier', authenticateToken, (req, res) => {
+router.get('/supplier', authenticateToken, async (req, res) => {
   try {
-    res.json(mockSupplierData);
+    // Get supplier's products
+    const products = await Product.find({ supplier: req.userId });
+    
+    // Get supplier's orders
+    const orders = await Order.find({ supplier: req.userId })
+      .populate('serviceProvider', 'name company')
+      .sort({ createdAt: -1 });
+
+    // Calculate stats
+    const stats = {
+      totalProducts: products.length,
+      activeOrders: orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length,
+      totalRevenue: orders
+        .filter(o => o.status === 'delivered')
+        .reduce((sum, o) => sum + o.totalAmount, 0),
+      pendingQuotes: orders.filter(o => o.status === 'pending').length
+    };
+
+    // Format products for response
+    const formattedProducts = products.slice(0, 10).map(product => ({
+      id: product._id,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      unit: product.unit,
+      stock: product.stock,
+      description: product.description
+    }));
+
+    // Format recent orders
+    const formattedOrders = orders.slice(0, 5).map(order => ({
+      id: order.orderNumber || order._id,
+      customer: order.serviceProvider ? 
+        (order.serviceProvider.company || order.serviceProvider.name) : 'Unknown',
+      amount: order.totalAmount,
+      status: order.status
+    }));
+
+    res.json({
+      status: 'success',
+      stats,
+      products: formattedProducts,
+      orders: formattedOrders
+    });
   } catch (error) {
     console.error('Supplier dashboard error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
+
+// Helper function to format dates
+function formatDate(date) {
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return '1 week ago';
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  
+  return date.toLocaleDateString();
+}
 
 export { router as dashboardRouter };

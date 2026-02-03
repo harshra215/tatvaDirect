@@ -1,90 +1,141 @@
 import express from 'express';
 import { authenticateToken } from './auth.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
-// Mock profile database (in production, use a real database)
-const profiles = [];
-
 // Get user profile
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const profile = profiles.find(p => p.userId === req.userId);
+    const user = await User.findById(req.userId).select('-password');
     
-    if (!profile) {
-      // Return empty profile structure based on user type
-      const user = getUserById(req.userId);
-      const emptyProfile = createEmptyProfile(user.userType, req.userId);
-      return res.json({ profile: emptyProfile });
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'User not found' 
+      });
     }
 
-    res.json({ profile });
+    // Return profile structure based on user type
+    const profile = createProfileResponse(user);
+    res.json({ 
+      status: 'success',
+      profile 
+    });
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
 // Update user profile
-router.put('/', authenticateToken, (req, res) => {
+router.put('/', authenticateToken, async (req, res) => {
   try {
     const profileData = req.body;
-    const existingProfileIndex = profiles.findIndex(p => p.userId === req.userId);
-
-    const updatedProfile = {
-      ...profileData,
-      userId: req.userId,
-      updatedAt: new Date().toISOString()
+    
+    // Prepare update data based on user type
+    const updateData = {
+      company: profileData.companyName,
+      phone: profileData.phone,
+      'address.street': profileData.address?.street,
+      'address.city': profileData.address?.city,
+      'address.state': profileData.address?.state,
+      'address.zipCode': profileData.address?.zipCode,
+      'profile.website': profileData.website,
+      'profile.description': profileData.description
     };
 
-    if (existingProfileIndex >= 0) {
-      profiles[existingProfileIndex] = updatedProfile;
-    } else {
-      updatedProfile.createdAt = new Date().toISOString();
-      profiles.push(updatedProfile);
+    // Add user type specific fields
+    if (profileData.userType === 'service_provider') {
+      updateData['profile.gstin'] = profileData.gstin;
+      updateData['profile.panNumber'] = profileData.panNumber;
+      updateData['profile.projects'] = profileData.projects || [];
+    } else if (profileData.userType === 'supplier') {
+      updateData['profile.businessType'] = profileData.businessType;
+      updateData['profile.categories'] = profileData.categories || [];
+      updateData['profile.branches'] = profileData.branches || [];
     }
 
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'User not found' 
+      });
+    }
+
+    const profile = createProfileResponse(updatedUser);
     res.json({ 
+      status: 'success',
       message: 'Profile updated successfully',
-      profile: updatedProfile 
+      profile 
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validation Error',
+        errors
+      });
+    }
+    
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal server error' 
+    });
   }
 });
 
-// Helper function to get user by ID (you'll need to import this from auth.js)
-function getUserById(userId) {
-  // This should be imported from auth.js or shared
-  // For now, returning a mock user
-  return { id: userId, userType: 'service_provider' };
-}
-
-// Helper function to create empty profile structure
-function createEmptyProfile(userType, userId) {
+// Helper function to create profile response structure
+function createProfileResponse(user) {
   const baseProfile = {
-    userId,
-    companyName: '',
-    contactPerson: '',
-    phone: '',
-    email: '',
-    createdAt: new Date().toISOString()
+    userId: user._id,
+    companyName: user.company || '',
+    contactPerson: user.name,
+    phone: user.phone || '',
+    email: user.email,
+    address: user.address || {},
+    website: user.profile?.website || '',
+    description: user.profile?.description || '',
+    userType: user.userType,
+    createdAt: user.createdAt
   };
 
-  if (userType === 'service_provider') {
+  if (user.userType === 'service_provider') {
     return {
       ...baseProfile,
-      gstin: '',
-      projects: []
+      gstin: user.profile?.gstin || '',
+      panNumber: user.profile?.panNumber || '',
+      projects: user.profile?.projects || []
     };
-  } else {
+  } else if (user.userType === 'supplier') {
     return {
       ...baseProfile,
-      mainGstin: '',
-      branches: []
+      businessType: user.profile?.businessType || '',
+      categories: user.profile?.categories || [],
+      branches: user.profile?.branches || []
     };
   }
+
+  return baseProfile;
 }
 
 export { router as profileRouter };

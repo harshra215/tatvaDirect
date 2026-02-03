@@ -61,7 +61,7 @@ const Signup = ({ onLogin }) => {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.status === 'success') {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         onLogin(data.user);
