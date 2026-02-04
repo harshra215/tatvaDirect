@@ -40,7 +40,7 @@ const VendorSelect = ({ items, onComplete }) => {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Vendor Selection</h1>
+        <h1>Supplier Selection</h1>
         <p>Choose the best vendor for each item</p>
       </div>
 
@@ -59,7 +59,7 @@ const VendorSelect = ({ items, onComplete }) => {
                   <div className="vendor-details">
                     <div className="detail">
                       <TrendingUp size={16} />
-                      <span>${vendor.price}</span>
+                      <span>₹{vendor.price}</span>
                     </div>
                     <div className="detail">
                       <Clock size={16} />
