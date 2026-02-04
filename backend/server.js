@@ -16,8 +16,10 @@ import { adminRouter } from './routes/admin.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (don't block server startup)
+connectDB().catch(err => {
+  console.error('MongoDB connection failed, but server will continue:', err.message);
+});
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
