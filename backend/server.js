@@ -17,8 +17,18 @@ import { adminRouter } from './routes/admin.js';
 dotenv.config();
 
 // Connect to MongoDB (don't block server startup)
-connectDB().catch(err => {
-  console.error('MongoDB connection failed, but server will continue:', err.message);
+connectDB().catch(async (err) => {
+  console.error('Primary MongoDB connection failed:', err.message);
+  
+  // Try fallback connection method
+  try {
+    const { default: connectWithFallback } = await import('./config/fallbackDB.js');
+    await connectWithFallback();
+    console.log('✅ Connected using fallback method');
+  } catch (fallbackErr) {
+    console.error('❌ All MongoDB connection methods failed:', fallbackErr.message);
+    console.log('⚠️  Server will continue without database connection');
+  }
 });
 
 const app = express();
@@ -57,10 +67,23 @@ app.use('/api/po', poRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  const dbStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+
   res.status(200).json({
     status: 'success',
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: {
+      status: dbStates[dbStatus] || 'unknown',
+      connected: dbStatus === 1
+    },
+    uptime: process.uptime()
   });
 });
 
