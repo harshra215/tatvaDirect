@@ -17,19 +17,10 @@ import { adminRouter } from './routes/admin.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB (don't block server startup)
-connectDB().catch(async (err) => {
-  console.error('Primary MongoDB connection failed:', err.message);
-  
-  // Try fallback connection method
-  try {
-    const { default: connectWithFallback } = await import('./config/fallbackDB.js');
-    await connectWithFallback();
-    console.log('✅ Connected using fallback method');
-  } catch (fallbackErr) {
-    console.error('❌ All MongoDB connection methods failed:', fallbackErr.message);
-    console.log('⚠️  Server will continue without database connection');
-  }
+// Connect to MongoDB
+connectDB().catch((err) => {
+  console.error('❌ MongoDB connection failed:', err.message);
+  process.exit(1);
 });
 
 const app = express();
@@ -142,7 +133,7 @@ app.all('*', (req, res) => {
 });
 
 const port = process.env.PORT || 5000;
-const HOST = '0.0.0.0'; // Always bind to 0.0.0.0 for deployment platforms
+const HOST = '0.0.0.0';
 
 console.log(`🚀 Starting server...`);
 console.log(`📍 Host: ${HOST}`);
@@ -170,7 +161,10 @@ process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   server.close(() => {
     console.log('✅ Server closed');
-    process.exit(0);
+    mongoose.connection.close(false, () => {
+      console.log('🔌 MongoDB connection closed');
+      process.exit(0);
+    });
   });
 });
 
@@ -178,6 +172,9 @@ process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
   server.close(() => {
     console.log('✅ Server closed');
-    process.exit(0);
+    mongoose.connection.close(false, () => {
+      console.log('🔌 MongoDB connection closed');
+      process.exit(0);
+    });
   });
 });
