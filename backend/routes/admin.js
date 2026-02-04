@@ -41,24 +41,22 @@ const generateAdminData = async () => {
     const serviceProviders = allUsers.filter(u => u.userType === 'service_provider');
     const suppliers = allUsers.filter(u => u.userType === 'supplier');
 
-    // Get all products with populated supplier data
-    const products = await Product.find().populate('supplier', 'name company email');
+    // Get all products without populating
+    const products = await Product.find();
     
-    // Get all BOQs with populated service provider data
-    const boqs = await BOQ.find().populate('serviceProvider', 'name company email');
+    // Get all BOQs without populating
+    const boqs = await BOQ.find();
     
-    // Get all orders with populated data
-    const orders = await Order.find()
-      .populate('serviceProvider', 'name company email')
-      .populate('supplier', 'name company email');
+    // Get all orders without populating
+    const orders = await Order.find();
 
     // Generate supplier data with their products and orders
     const supplierData = await Promise.all(suppliers.map(async (supplier) => {
       const supplierProducts = products.filter(p => 
-        p.supplier && p.supplier._id.toString() === supplier._id.toString()
+        p.supplier && p.supplier.toString() === supplier._id.toString()
       );
       const supplierOrders = orders.filter(o => 
-        o.supplier && o.supplier._id.toString() === supplier._id.toString()
+        o.supplier && o.supplier.toString() === supplier._id.toString()
       );
       const totalInventoryValue = supplierProducts.reduce((sum, p) => sum + (p.price * p.stock), 0);
       const totalRevenue = supplierOrders
@@ -80,10 +78,10 @@ const generateAdminData = async () => {
     // Generate service provider data with their BOQs and orders
     const serviceProviderData = await Promise.all(serviceProviders.map(async (sp) => {
       const spBOQs = boqs.filter(boq => 
-        boq.serviceProvider && boq.serviceProvider._id.toString() === sp._id.toString()
+        boq.serviceProvider && boq.serviceProvider.toString() === sp._id.toString()
       );
       const spOrders = orders.filter(o => 
-        o.serviceProvider && o.serviceProvider._id.toString() === sp._id.toString()
+        o.serviceProvider && o.serviceProvider.toString() === sp._id.toString()
       );
       const totalBOQValue = spBOQs.reduce((sum, boq) => sum + (boq.totalValue || 0), 0);
       const totalSpent = spOrders
@@ -106,10 +104,8 @@ const generateAdminData = async () => {
     const transactions = orders.map(order => ({
       id: order.orderNumber || order._id,
       type: 'order',
-      serviceProvider: order.serviceProvider ? 
-        (order.serviceProvider.company || order.serviceProvider.name) : 'Unknown',
-      supplier: order.supplier ? 
-        (order.supplier.company || order.supplier.name) : 'Unknown',
+      serviceProvider: 'Service Provider', // Generic name since not populated
+      supplier: 'Supplier', // Generic name since not populated
       amount: order.totalAmount,
       date: order.createdAt.toISOString().split('T')[0],
       status: order.status
@@ -234,17 +230,13 @@ router.get('/users/:id', authenticateToken, isAdmin, async (req, res) => {
 router.get('/transactions', authenticateToken, isAdmin, async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate('serviceProvider', 'name company email')
-      .populate('supplier', 'name company email')
       .sort({ createdAt: -1 });
 
     const transactions = orders.map(order => ({
       id: order.orderNumber || order._id,
       type: 'order',
-      serviceProvider: order.serviceProvider ? 
-        (order.serviceProvider.company || order.serviceProvider.name) : 'Unknown',
-      supplier: order.supplier ? 
-        (order.supplier.company || order.supplier.name) : 'Unknown',
+      serviceProvider: 'Service Provider', // Generic name since not populated
+      supplier: 'Supplier', // Generic name since not populated
       amount: order.totalAmount,
       date: order.createdAt.toISOString().split('T')[0],
       status: order.status

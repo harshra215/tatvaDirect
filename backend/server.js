@@ -16,8 +16,10 @@ import { adminRouter } from './routes/admin.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (don't block server startup)
+connectDB().catch(err => {
+  console.error('MongoDB connection failed, but server will continue:', err.message);
+});
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -28,6 +30,21 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Tatva Direct API Server',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      admin: '/api/admin',
+      dashboard: '/api/dashboard'
+    }
+  });
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/supplier', supplierRouter);
@@ -101,7 +118,41 @@ app.all('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+
+console.log(`🚀 Starting server...`);
+console.log(`📍 Host: ${HOST}`);
+console.log(`🔌 Port: ${PORT}`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+console.log(`🗄️  MongoDB: ${process.env.MONGODB_URI ? '✅ Configured' : '❌ Not configured'}`);
+
+const server = app.listen(PORT, HOST, () => {
+  console.log(`✅ Server successfully running on http://${HOST}:${PORT}`);
+  console.log(`🏥 Health check: http://${HOST}:${PORT}/api/health`);
+  console.log(`📊 API docs: http://${HOST}:${PORT}/`);
+});
+
+server.on('error', (err) => {
+  console.error('❌ Server failed to start:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });

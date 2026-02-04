@@ -128,8 +128,6 @@ router.delete('/products/:id', authenticateToken, async (req, res) => {
 router.get('/orders', authenticateToken, async (req, res) => {
   try {
     const orders = await Order.find({ supplier: req.userId })
-      .populate('serviceProvider', 'name company email')
-      .populate('items.product', 'name category unit')
       .sort({ createdAt: -1 });
     
     res.json({ 

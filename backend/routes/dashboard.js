@@ -15,7 +15,6 @@ router.get('/service-provider', authenticateToken, async (req, res) => {
     
     // Get user's orders (as service provider)
     const orders = await Order.find({ serviceProvider: req.userId })
-      .populate('supplier', 'name company')
       .sort({ createdAt: -1 });
 
     // Calculate stats
@@ -40,7 +39,7 @@ router.get('/service-provider', authenticateToken, async (req, res) => {
     // Format recent POs (orders)
     const recentPOs = orders.slice(0, 5).map(order => ({
       id: order.orderNumber || order._id,
-      vendor: order.supplier ? (order.supplier.company || order.supplier.name) : 'Unknown',
+      vendor: 'Supplier', // Since we're not populating, use generic name
       amount: order.totalAmount,
       status: order.status
     }));
@@ -68,7 +67,6 @@ router.get('/supplier', authenticateToken, async (req, res) => {
     
     // Get supplier's orders
     const orders = await Order.find({ supplier: req.userId })
-      .populate('serviceProvider', 'name company')
       .sort({ createdAt: -1 });
 
     // Calculate stats
@@ -95,8 +93,7 @@ router.get('/supplier', authenticateToken, async (req, res) => {
     // Format recent orders
     const formattedOrders = orders.slice(0, 5).map(order => ({
       id: order.orderNumber || order._id,
-      customer: order.serviceProvider ? 
-        (order.serviceProvider.company || order.serviceProvider.name) : 'Unknown',
+      customer: 'Service Provider', // Since we're not populating, use generic name
       amount: order.totalAmount,
       status: order.status
     }));
