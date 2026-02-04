@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import connectDB from './config/database.js';
 import { boqRouter } from './routes/boq.js';
 import { vendorRouter } from './routes/vendors.js';
@@ -140,25 +141,26 @@ app.all('*', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+const port = process.env.PORT || 5000;
+const HOST = '0.0.0.0'; // Always bind to 0.0.0.0 for deployment platforms
 
 console.log(`🚀 Starting server...`);
 console.log(`📍 Host: ${HOST}`);
-console.log(`🔌 Port: ${PORT}`);
+console.log(`🔌 Port: ${port}`);
 console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 console.log(`🗄️  MongoDB: ${process.env.MONGODB_URI ? '✅ Configured' : '❌ Not configured'}`);
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`✅ Server successfully running on http://${HOST}:${PORT}`);
-  console.log(`🏥 Health check: http://${HOST}:${PORT}/api/health`);
-  console.log(`📊 API docs: http://${HOST}:${PORT}/`);
+const server = app.listen(port, HOST, () => {
+  console.log(`✅ Server successfully running on http://${HOST}:${port}`);
+  console.log(`🏥 Health check: http://${HOST}:${port}/api/health`);
+  console.log(`📊 API docs: http://${HOST}:${port}/`);
+  console.log(`🌐 Server is ready to accept connections`);
 });
 
 server.on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use`);
+    console.error(`Port ${port} is already in use`);
   }
   process.exit(1);
 });
