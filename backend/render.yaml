@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: tatva-direct-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb+srv://tatavops_db_user:BUQ87k94N8luBD0P@tatvaops-cluster.nhn3jdr.mongodb.net/tatvaops-dev
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: PORT
+        value: 10000

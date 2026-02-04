@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch server.js",
+    "start": "node server.js",
     "seed": "node scripts/seedData.js",
     "clear-db": "node scripts/clearDatabase.js",
     "restore": "node scripts/restoreData.js",
